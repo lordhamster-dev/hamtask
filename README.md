@@ -9,6 +9,29 @@
 - Read `report.next.filter`, `report.next.columns`, `report.next.labels`, and `report.next.sort` from `~/.taskrc` or `~/.config/task/taskrc`.
 - Mutate tasks by invoking the `task` command, never by editing Taskwarrior data files directly.
 
+## Requirements
+
+- Python 3.11+
+- Taskwarrior's `task` command must be installed and configured
+
+## Install from PyPI
+
+```bash
+uv tool install hamtask
+```
+
+Then run:
+
+```bash
+hamtask
+```
+
+Update an installed PyPI version with:
+
+```bash
+uv tool upgrade hamtask
+```
+
 ## Run during development
 
 ```bash
