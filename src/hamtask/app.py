@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from rich.text import Text
 from textual import on
 from textual.app import App, ComposeResult, SystemCommand
 from textual.binding import Binding
@@ -237,7 +238,12 @@ class HamtaskApp(App[None]):
         table = self.table
         table.clear()
         for task in self.visible_tasks:
-            table.add_row(*(self.format_value(task, column) for column in self.config.columns))
+            table.add_row(
+                *(
+                    self.format_cell(task, column, is_first=column_index == 0)
+                    for column_index, column in enumerate(self.config.columns)
+                )
+            )
         self.update_detail()
 
     def filter_visible_tasks(self) -> list[Task]:
@@ -250,6 +256,16 @@ class HamtaskApp(App[None]):
         values = [self.format_value(task, column) for column in self.config.columns]
         values.extend([task.description, task.uuid, " ".join(task.tags)])
         return " ".join(values).casefold()
+
+    def format_cell(self, task: Task, column: str, *, is_first: bool = False) -> str | Text:
+        value = self.format_value(task, column)
+        if not task.start:
+            return value
+        if column == "description":
+            value = f"▶ {value}"
+        elif is_first and "description" not in self.config.columns:
+            value = f"▶ {value}"
+        return Text(value, style="bold green")
 
     def format_value(self, task: Task, column: str) -> str:
         value = getattr(task, column, task.raw.get(column, ""))
