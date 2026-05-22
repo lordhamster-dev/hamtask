@@ -1,0 +1,29 @@
+[project]
+name = "hamtask"
+version = "0.1.0"
+description = "A vim-style Taskwarrior TUI built with Textual."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+    "textual>=0.80",
+]
+
+[project.scripts]
+hamtask = "hamtask.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
