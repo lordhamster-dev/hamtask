@@ -1,6 +1,6 @@
 [project]
 name = "hamtask"
-version = "0.1.0"
+version = "0.2.0"
 description = "A vim-style Taskwarrior TUI built with Textual."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,8 +20,10 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
+    "arrow>=1.3",
     "pydantic>=2.0",
     "textual>=0.80",
+    "typer>=0.12",
 ]
 
 [project.urls]

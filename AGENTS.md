@@ -6,6 +6,11 @@ Guidance for coding agents working on `hamtask`.
 
 `hamtask` is a vim-style Taskwarrior TUI built with Python and Textual.
 
+## Development constraints
+
+- Use `arrow` for datetime parsing, formatting, and timezone handling. Do not introduce new standard-library datetime parsing/formatting in application code unless an external API requires `datetime` objects.
+- Use `typer` for command-line interfaces. Do not add new `argparse`-based CLI code.
+
 ## Development commands
 
 Run checks before finishing code changes:

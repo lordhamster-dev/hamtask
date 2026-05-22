@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+import arrow
+
 from hamtask.models import Task
 from hamtask.parsing import parse_csv_setting
 
@@ -48,8 +50,7 @@ def sort_value(task: Task, field: str) -> tuple[int, Any]:
 
 def parse_task_date(value: str) -> datetime:
     try:
-        if value.endswith("Z"):
-            return datetime.strptime(value, "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
-        return datetime.fromisoformat(value)
-    except ValueError:
+        parsed = arrow.get(value, "YYYYMMDDTHHmmss[Z]") if value.endswith("Z") else arrow.get(value)
+    except (arrow.ParserError, ValueError):
         return datetime.max.replace(tzinfo=UTC)
+    return parsed.datetime

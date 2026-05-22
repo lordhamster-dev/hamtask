@@ -26,6 +26,13 @@ Then run:
 hamtask
 ```
 
+Open a specific Taskwarrior report from your taskrc:
+
+```bash
+hamtask completed
+hamtask waiting
+```
+
 Update an installed PyPI version with:
 
 ```bash
@@ -82,16 +89,50 @@ uv tool uninstall hamtask
 - `r`: refresh
 - `q`: quit
 - `enter`: toggle bottom task details
-- `/`: apply Taskwarrior filter
+- `/`: search current list
+- `f`: apply Taskwarrior filter
 - `:`: command mode
 - `a`: `task add ...`
 - `m`: `task <uuid> modify ...`
 - `e`: `task <uuid> edit`
 - `A`: `task <uuid> annotate ...`
 - `d`: `task <uuid> done`
+- `s`: start/stop selected task
 - `u`: `task undo`
 - `x`: delete with confirmation
 - `?`: show all shortcuts
+
+## Reports
+
+By default, hamtask loads the `next` report from your taskrc:
+
+```text
+report.next.filter
+report.next.columns
+report.next.labels
+report.next.sort
+```
+
+You can start with another report:
+
+```bash
+hamtask waiting
+```
+
+Or switch reports at runtime:
+
+```text
+:report waiting
+```
+
+hamtask will read the matching report keys, such as:
+
+```text
+report.waiting.filter
+report.waiting.columns
+report.waiting.labels
+report.waiting.sort
+```
 
 ## Command mode
 
@@ -104,6 +145,7 @@ Supported commands:
 :refresh
 :f <filter>
 :filter <filter>
+:report <name>
 :add <raw task args>
 :mod <raw task args>
 :modify <raw task args>

@@ -61,3 +61,19 @@ def test_undo_invokes_task_undo(monkeypatch):
     TaskwarriorClient().undo()
 
     assert calls[0] == ["task", "undo", "rc.confirmation=no"]
+
+
+def test_start_and_stop_use_uuid(monkeypatch):
+    calls = []
+
+    def fake_run(args, **kwargs):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    client = TaskwarriorClient()
+    client.start("abc")
+    client.stop("abc")
+
+    assert calls == [["task", "abc", "start"], ["task", "abc", "stop"]]

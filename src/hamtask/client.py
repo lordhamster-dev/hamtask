@@ -61,6 +61,12 @@ class TaskwarriorClient:
     def done(self, task_uuid: str) -> None:
         self.run([task_uuid, "done"])
 
+    def start(self, task_uuid: str) -> None:
+        self.run([task_uuid, "start"])
+
+    def stop(self, task_uuid: str) -> None:
+        self.run([task_uuid, "stop"])
+
     def undo(self) -> None:
         self.run(["undo", "rc.confirmation=no"])
 

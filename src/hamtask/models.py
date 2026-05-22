@@ -19,6 +19,7 @@ class Task(BaseModel):
     priority: str | None = None
     due: str | None = None
     scheduled: str | None = None
+    start: str | None = None
     urgency: float | None = None
     tags: list[str] = Field(default_factory=list)
     annotations: list[Annotation] = Field(default_factory=list)
@@ -37,6 +38,7 @@ class Task(BaseModel):
             "priority",
             "due",
             "scheduled",
+            "start",
             "urgency",
             "tags",
             "annotations",
