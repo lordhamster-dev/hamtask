@@ -96,8 +96,9 @@ uv tool uninstall hamtask
 - `m`: `task <uuid> modify ...`
 - `e`: `task <uuid> edit`
 - `A`: `task <uuid> annotate ...`
-- `d`: `task <uuid> done`
-- `s`: start/stop selected task
+- `space`: select/unselect task
+- `d`: done selected tasks, or current task when nothing is selected
+- `s`: start/stop selected tasks, or current task when nothing is selected
 - `u`: `task undo`
 - `x`: delete with confirmation
 - `?`: show all shortcuts

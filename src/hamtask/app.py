@@ -79,8 +79,9 @@ class HelpScreen(ModalScreen[None]):
         ("m", "Modify task"),
         ("e", "Edit task"),
         ("A", "Annotate task"),
-        ("d", "Done task"),
-        ("s", "Start/stop task"),
+        ("Space", "Select/unselect task"),
+        ("d", "Done selected or current task"),
+        ("s", "Start/stop selected or current tasks"),
         ("u", "Undo last Taskwarrior operation"),
         ("x", "Delete with confirmation"),
         ("?", "Show this help"),
@@ -161,6 +162,7 @@ class HamtaskApp(App[None]):
         Binding("m", "modify", "Modify"),
         Binding("e", "edit", "Edit"),
         Binding("A", "annotate", "Annotate"),
+        Binding("space", "toggle_select", "Select"),
         Binding("d", "done", "Done"),
         Binding("s", "toggle_start", "Start/Stop"),
         Binding("u", "undo", "Undo"),
@@ -181,6 +183,7 @@ class HamtaskApp(App[None]):
         self.search_query = ""
         self.tasks: list[Task] = []
         self.visible_tasks: list[Task] = []
+        self.selected_uuids: set[str] = set()
         self.detail_visible = True
 
     def get_system_commands(self, screen) -> list[SystemCommand]:
@@ -231,9 +234,11 @@ class HamtaskApp(App[None]):
         status = self.query_one("#status", Static)
         self.visible_tasks = self.filter_visible_tasks()
         search = f"    search: {self.search_query}" if self.search_query else ""
+        selected = f"    selected: {len(self.selected_uuids)}" if self.selected_uuids else ""
         status.update(
             f"report: {self.current_report}    filter: {self.current_filter}{search}    "
             f"sort: {self.config.sort}    count: {len(self.visible_tasks)}/{len(self.tasks)}"
+            f"{selected}"
         )
         table = self.table
         table.clear()
@@ -252,6 +257,18 @@ class HamtaskApp(App[None]):
         query = self.search_query.casefold()
         return [task for task in self.tasks if query in self.search_text(task)]
 
+    def tasks_for_operation(self) -> list[Task]:
+        if self.selected_uuids:
+            return [task for task in self.visible_tasks if task.uuid in self.selected_uuids]
+        task = self.selected_task()
+        return [task] if task else []
+
+    def task_ref(self, task: Task) -> str | int:
+        return task.id or task.uuid
+
+    def task_refs(self, tasks: list[Task]) -> str:
+        return ", ".join(str(self.task_ref(task)) for task in tasks)
+
     def search_text(self, task: Task) -> str:
         values = [self.format_value(task, column) for column in self.config.columns]
         values.extend([task.description, task.uuid, " ".join(task.tags)])
@@ -259,13 +276,21 @@ class HamtaskApp(App[None]):
 
     def format_cell(self, task: Task, column: str, *, is_first: bool = False) -> str | Text:
         value = self.format_value(task, column)
-        if not task.start:
-            return value
-        if column == "description":
-            value = f"▶ {value}"
-        elif is_first and "description" not in self.config.columns:
-            value = f"▶ {value}"
-        return Text(value, style="bold green")
+        markers = ""
+        if task.uuid in self.selected_uuids:
+            markers += "✓ "
+        if task.start:
+            markers += "▶ "
+        should_show_markers = column == "description" or (
+            is_first and "description" not in self.config.columns
+        )
+        if markers and should_show_markers:
+            value = f"{markers}{value}"
+        if task.start:
+            return Text(value, style="bold green")
+        if task.uuid in self.selected_uuids:
+            return Text(value, style="bold cyan")
+        return value
 
     def format_value(self, task: Task, column: str) -> str:
         value = getattr(task, column, task.raw.get(column, ""))
@@ -293,6 +318,18 @@ class HamtaskApp(App[None]):
 
     def action_refresh(self) -> None:
         self.refresh_tasks()
+
+    def action_toggle_select(self) -> None:
+        task = self.selected_task()
+        if not task:
+            return
+        cursor_row = self.table.cursor_row
+        if task.uuid in self.selected_uuids:
+            self.selected_uuids.remove(task.uuid)
+        else:
+            self.selected_uuids.add(task.uuid)
+        self.render_table()
+        self.table.move_cursor(row=min(cursor_row, max(len(self.visible_tasks) - 1, 0)))
 
     def action_toggle_detail(self) -> None:
         self.detail_visible = not self.detail_visible
@@ -399,6 +436,7 @@ class HamtaskApp(App[None]):
     def apply_filter(self, raw_filter: str) -> None:
         self.current_filter = raw_filter
         self.search_query = ""
+        self.selected_uuids.clear()
         self.refresh_tasks()
 
     def apply_report(self, report: str) -> None:
@@ -409,6 +447,7 @@ class HamtaskApp(App[None]):
         self.current_report = self.config.report.name
         self.current_filter = self.config.default_filter
         self.search_query = ""
+        self.selected_uuids.clear()
         self.configure_table_columns()
         self.refresh_tasks()
 
@@ -450,20 +489,31 @@ class HamtaskApp(App[None]):
             )
 
     def action_done(self) -> None:
-        if task := self.selected_task():
-            self.run_and_refresh(
-                lambda: self.client.done(task.uuid),
-                f"Done task {task.id or task.uuid}",
-            )
+        tasks = self.tasks_for_operation()
+        if not tasks:
+            return
+
+        def run() -> None:
+            for task in tasks:
+                self.client.done(task.uuid)
+
+        self.run_and_refresh(run, f"Done task(s) {self.task_refs(tasks)}")
 
     def action_toggle_start(self) -> None:
-        if not (task := self.selected_task()):
+        tasks = self.tasks_for_operation()
+        if not tasks:
             return
-        task_ref = task.id or task.uuid
-        if task.start:
-            self.run_and_refresh(lambda: self.client.stop(task.uuid), f"Stopped task {task_ref}")
-        else:
-            self.run_and_refresh(lambda: self.client.start(task.uuid), f"Started task {task_ref}")
+        should_stop = all(task.start for task in tasks)
+        action = "Stopped" if should_stop else "Started"
+
+        def run() -> None:
+            for task in tasks:
+                if should_stop:
+                    self.client.stop(task.uuid)
+                elif not task.start:
+                    self.client.start(task.uuid)
+
+        self.run_and_refresh(run, f"{action} task(s) {self.task_refs(tasks)}")
 
     def action_undo(self) -> None:
         def confirmed(ok: bool) -> None:
@@ -473,18 +523,21 @@ class HamtaskApp(App[None]):
         self.push_screen(ConfirmScreen("Undo last Taskwarrior operation?"), confirmed)
 
     def action_delete(self) -> None:
-        task = self.selected_task()
-        if not task:
+        tasks = self.tasks_for_operation()
+        if not tasks:
             return
 
         def confirmed(ok: bool) -> None:
-            if ok:
-                self.run_and_refresh(
-                    lambda: self.client.delete(task.uuid),
-                    f"Deleted task {task.id or task.uuid}",
-                )
+            if not ok:
+                return
 
-        self.push_screen(ConfirmScreen(f"Delete task {task.id or task.uuid}?"), confirmed)
+            def run() -> None:
+                for task in tasks:
+                    self.client.delete(task.uuid)
+
+            self.run_and_refresh(run, f"Deleted task(s) {self.task_refs(tasks)}")
+
+        self.push_screen(ConfirmScreen(f"Delete task(s) {self.task_refs(tasks)}?"), confirmed)
 
     def action_command(self) -> None:
         self.prompt(":", self.execute_command)
