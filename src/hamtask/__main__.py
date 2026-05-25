@@ -13,7 +13,7 @@ def main(
     report: Annotated[
         str,
         typer.Argument(help="Taskwarrior report name to load from taskrc."),
-    ] = "next",
+    ] = "default",
     taskrc: Annotated[
         Path | None,
         typer.Option(help="Path to taskrc. Defaults to ~/.taskrc or ~/.config/task/taskrc."),

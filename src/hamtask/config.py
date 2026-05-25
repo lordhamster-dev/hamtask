@@ -95,39 +95,25 @@ def task_show_setting(key: str) -> str | None:
     return None
 
 
-def report_setting(settings: dict[str, str], key: str, *, use_task_show: bool) -> str | None:
+def report_setting(settings: dict[str, str], key: str) -> str | None:
     value = settings.get(key)
-    if value or not use_task_show:
+    if value:
         return value
     return task_show_setting(key)
 
 
 def load_report(settings: dict[str, str], name: str) -> ReportConfig:
     prefix = f"report.{name}."
-    use_task_show = name != "next"
-    report_filter = (
-        report_setting(
-            settings,
-            f"{prefix}filter",
-            use_task_show=use_task_show,
-        )
-        or DEFAULT_FILTER
-    )
-    columns = (
-        parse_csv_setting(report_setting(settings, f"{prefix}columns", use_task_show=use_task_show))
-        or DEFAULT_COLUMNS
-    )
-    labels = (
-        parse_csv_setting(report_setting(settings, f"{prefix}labels", use_task_show=use_task_show))
-        or DEFAULT_LABELS
-    )
-    sort = report_setting(settings, f"{prefix}sort", use_task_show=use_task_show) or DEFAULT_SORT
+    report_filter = report_setting(settings, f"{prefix}filter") or DEFAULT_FILTER
+    columns = parse_csv_setting(report_setting(settings, f"{prefix}columns")) or DEFAULT_COLUMNS
+    labels = parse_csv_setting(report_setting(settings, f"{prefix}labels")) or DEFAULT_LABELS
+    sort = report_setting(settings, f"{prefix}sort") or DEFAULT_SORT
     if len(labels) != len(columns):
         labels = columns
     return ReportConfig(name=name, filter=report_filter, columns=columns, labels=labels, sort=sort)
 
 
-def load_config(path: str | Path | None = None, report: str = "next") -> HamtaskConfig:
+def load_config(path: str | Path | None = None, report: str = "default") -> HamtaskConfig:
     taskrc_path = Path(path).expanduser() if path else default_taskrc_path()
     settings = read_taskrc(taskrc_path)
     return HamtaskConfig(

@@ -275,17 +275,20 @@ class HamtaskApp(App[None]):
         return " ".join(values).casefold()
 
     def format_cell(self, task: Task, column: str, *, is_first: bool = False) -> str | Text:
+        is_description = column == "description" or (
+            is_first and "description" not in self.config.columns
+        )
         value = self.format_value(task, column)
         markers = ""
         if task.uuid in self.selected_uuids:
             markers += "✓ "
         if task.start:
             markers += "▶ "
-        should_show_markers = column == "description" or (
-            is_first and "description" not in self.config.columns
-        )
-        if markers and should_show_markers:
+
+        if markers and is_description:
             value = f"{markers}{value}"
+        if task.status == "completed" and is_description:
+            return Text(value, style="dim strike")
         if task.start:
             return Text(value, style="bold green")
         if task.uuid in self.selected_uuids:
